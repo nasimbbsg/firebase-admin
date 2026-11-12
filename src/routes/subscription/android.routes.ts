@@ -13,7 +13,7 @@ const requestSchema = z
   .strict();
 
 export async function androidSubscriptionRoutes(app: FastifyInstance) {
-  app.post("/subscription/android", async (request, reply) => {
+  app.post("/subscriptions/android", async (request, reply) => {
     const parsed = requestSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -52,7 +52,29 @@ export async function androidSubscriptionRoutes(app: FastifyInstance) {
           : "Subscription verified but not currently active",
         data: result,
       });
-    } catch (error) {
+    } catch (error: any) {
+      const googleStatus = error?.response?.status ?? error?.code;
+      const googleReason = error?.response?.data?.error?.errors?.[0]?.reason;
+
+      if (
+        googleStatus === 410 ||
+        googleReason === "subscriptionPurchaseNoLongerAvailable"
+      ) {
+        request.log.warn(
+          { appId, productId, googleStatus, googleReason },
+          "Android subscription purchase has expired beyond Google's query window",
+        );
+
+        return reply.status(200).send({
+          success: true,
+          message: "Subscription has expired and is no longer verifiable",
+          data: {
+            isActive: false,
+            status: "EXPIRED",
+          },
+        });
+      }
+
       if (error instanceof Error && error.message === "PRODUCT_MISMATCH") {
         throw new AppError(
           422,

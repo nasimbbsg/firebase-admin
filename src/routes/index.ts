@@ -9,6 +9,6 @@ export async function registerRoutes(app: FastifyInstance) {
     prefix: "/api/v1",
   });
   await app.register(androidSubscriptionRoutes, {
-    prefix: "api/v1",
+    prefix: "/api/v1",
   });
 }
