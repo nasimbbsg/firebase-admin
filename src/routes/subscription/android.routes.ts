@@ -24,7 +24,7 @@ const querySchema = z
   .strict();
 
 export async function androidSubscriptionRoutes(app: FastifyInstance) {
-  app.post("/subscriptions/android", async (request, reply) => {
+  app.get("/subscriptions/android", async (request, reply) => {
     const query = querySchema.safeParse(request.query);
 
     if (!query.success) {
