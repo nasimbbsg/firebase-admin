@@ -1,20 +1,42 @@
 import type { FastifyInstance } from "fastify";
 import z from "zod";
 import { AppError } from "../../utils/app-error.js";
-import { getGoogleApp } from "../../config/google-apps.js";
 import { verifyAndroidSubscription } from "../../services/purchase/android-subscription.service.js";
+import { decodeBase64 } from "../../plugins/base64.js";
+import { googleApps } from "../../config/google-apps.js";
 
 const requestSchema = z
   .object({
-    appId: z.string().min(1),
+    appId: z.string().min(1).optional(),
+    packageName: z.string().min(1).optional(),
     productId: z.string().min(1),
     purchaseToken: z.string().min(1).max(4096),
+  })
+  .strict()
+  .refine((data) => Boolean(data.appId || data.packageName), {
+    message: "Either appId or packageName is required",
+  });
+
+const querySchema = z
+  .object({
+    a: z.string().min(1).max(16384),
   })
   .strict();
 
 export async function androidSubscriptionRoutes(app: FastifyInstance) {
   app.post("/subscriptions/android", async (request, reply) => {
-    const parsed = requestSchema.safeParse(request.body);
+    const query = querySchema.safeParse(request.query);
+
+    if (!query.success) {
+      throw new AppError(
+        400,
+        "VALIDATION_ERROR",
+        "Missing or invalid query parameter 'a'",
+      );
+    }
+    const decoded = decodeBase64(query.data.a);
+
+    const parsed = requestSchema.safeParse(decoded);
 
     if (!parsed.success) {
       throw new AppError(
@@ -24,12 +46,26 @@ export async function androidSubscriptionRoutes(app: FastifyInstance) {
       );
     }
 
-    const { appId, productId, purchaseToken } = parsed.data;
+    const { appId, packageName, productId, purchaseToken } = parsed.data;
 
-    const application = getGoogleApp(appId);
+    // Resolve application using appId or packageName
+    const application = appId
+      ? googleApps[appId]
+      : Object.values(googleApps).find(
+          (app) => app.packageName === packageName,
+        );
 
     if (!application) {
       throw new AppError(400, "INVALID_APPLICATION", "Unsupported application");
+    }
+
+    // If both are supplied, ensure they belong to the same application.
+    if (packageName && packageName !== application.packageName) {
+      throw new AppError(
+        400,
+        "APPLICATION_MISMATCH",
+        "appId and packageName do not match",
+      );
     }
 
     // TODO: Check productId against this application's
@@ -37,7 +73,7 @@ export async function androidSubscriptionRoutes(app: FastifyInstance) {
 
     try {
       const result = await verifyAndroidSubscription({
-        appId,
+        appId: application.appId,
         productId,
         purchaseToken,
       });
@@ -61,7 +97,7 @@ export async function androidSubscriptionRoutes(app: FastifyInstance) {
         googleReason === "subscriptionPurchaseNoLongerAvailable"
       ) {
         request.log.warn(
-          { appId, productId, googleStatus, googleReason },
+          { packageName, productId, googleStatus, googleReason },
           "Android subscription purchase has expired beyond Google's query window",
         );
 
@@ -84,7 +120,7 @@ export async function androidSubscriptionRoutes(app: FastifyInstance) {
       }
 
       request.log.error(
-        { err: error, appId, productId },
+        { err: error, packageName, productId },
         "Android subscription verification failed",
       );
 
