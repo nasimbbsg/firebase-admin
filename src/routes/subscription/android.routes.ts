@@ -41,7 +41,7 @@ export async function androidSubscriptionRoutes(app: FastifyInstance) {
     if (!parsed.success) {
       throw new AppError(
         400,
-        "VALICATION_ERROR",
+        "VALIDATION_ERROR",
         "Invalid subscription verification request",
       );
     }

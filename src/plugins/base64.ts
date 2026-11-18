@@ -8,7 +8,7 @@ export function decodeBase64(value: string): unknown {
   } catch (error) {
     throw new AppError(
       400,
-      "INVALIDE_ENCODED_REQUEST",
+      "INVALID_ENCODED_REQUEST",
       "Invalid Base64 encoded request",
     );
   }
