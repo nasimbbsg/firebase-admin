@@ -5,6 +5,7 @@ import { registerHelmet } from "./plugins/helmet.js";
 import { registerRateLimit } from "./plugins/rate-limit.js";
 import { registerErrorHandler } from "./plugins/error-handler.js";
 import { registerRoutes } from "./routes/index.js";
+import { registerRtdn } from "./plugins/rtdn.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -38,6 +39,7 @@ export async function buildApp() {
   await registerRateLimit(app);
   await registerErrorHandler(app);
   await registerRoutes(app);
+  await registerRtdn(app);
 
   return app;
 }

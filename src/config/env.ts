@@ -19,6 +19,13 @@ const envSchema = z.object({
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().min(1),
   GOOGLE_PRIVATE_KEY: z.string().min(1),
 
+  RTDN_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  GOOGLE_PUBSUB_PROJECT_ID: z.string().min(1).optional(),
+  GOOGLE_PUBSUB_SUBSCRIPTION: z.string().min(1).optional(),
+
   APP_ONE_ID: z.string().min(1),
   APP_ONE_PACKAGE: z.string().min(1),
 

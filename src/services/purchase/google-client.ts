@@ -7,6 +7,8 @@ const auth = new google.auth.JWT({
   scopes: ["https://www.googleapis.com/auth/androidpublisher"],
 });
 
+await auth.authorize();
+
 export const androidPublisher = google.androidpublisher({
   version: "v3",
   auth,
